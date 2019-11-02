@@ -1,5 +1,6 @@
 .*
 *.tsbuildinfo
+bin/build
 bin/release
 jest.config.js
 rollup.config.js
