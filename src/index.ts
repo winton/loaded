@@ -86,7 +86,7 @@ export class Loaded {
 
   callback(libName: string, lib: any): any | Promise<any> {
     if (lib.loaded) {
-      return lib.loaded(libName)
+      return lib.loaded(libName, this.loaded)
     }
   }
 }
