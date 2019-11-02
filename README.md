@@ -2,4 +2,4 @@
 
 Dynamic module loader 🌊🏄
 
-### <https://loader.surf>
+### <https://loaded.surf>
