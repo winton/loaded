@@ -10,9 +10,9 @@ export class Loaded {
     for (const libName in libs) {
       const lib = libs[libName]
       if (lib.then) {
-        this.pending[libName] = lib.then((lib: any) =>
-          this.attach(libName, lib)
-        )
+        this.pending[libName] = lib
+          .then((lib: any) => this.attach(libName, lib))
+          .then((lib: any) => this.callback(libName, lib))
       } else {
         this.loaded[libName] = lib
       }
@@ -22,8 +22,15 @@ export class Loaded {
       const lib = libs[libName]
       if (!lib.then) {
         const promise = this.attach(libName, lib)
-        if (promise) {
-          this.pending[libName] = promise
+        if (promise.then) {
+          this.pending[libName] = promise.then((lib: any) =>
+            this.callback(libName, lib)
+          )
+        } else {
+          const promise = this.callback(libName, lib)
+          if (promise && promise.then) {
+            this.pending[libName] = promise
+          }
         }
       }
     }
@@ -40,7 +47,7 @@ export class Loaded {
   private attach(
     libName: string,
     lib: any
-  ): void | Promise<any> {
+  ): any | Promise<any> {
     if (lib.default) {
       lib = lib.default
     }
@@ -71,7 +78,15 @@ export class Loaded {
     }
 
     if (attaches.length) {
-      return Promise.all(attaches)
+      return Promise.all(attaches).then(() => lib)
+    } else {
+      return lib
+    }
+  }
+
+  callback(libName: string, lib: any): any | Promise<any> {
+    if (lib.loaded) {
+      return lib.loaded(libName)
     }
   }
 }
