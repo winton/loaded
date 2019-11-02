@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "allowUnusedLabels": true,
+    "alwaysStrict": true,
+    "baseUrl": ".",
+    "declaration": true,
+    "esModuleInterop": true,
+    "sourceMap": true
+  }
+}

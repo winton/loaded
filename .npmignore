@@ -1,0 +1,11 @@
+.*
+*.tsbuildinfo
+bin/release
+jest.config.js
+rollup.config.js
+tsconfig.json
+tsconfig.*.json
+tsconfig-base.json
+docs
+media
+test

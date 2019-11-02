@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+cd "$(dirname "$0")/../"
+
+BUMP=${1:-minor}
+VERSION="$(npx -c 'echo "$npm_package_version"')"
+VERSION_BUMP="$(npx semver -i $BUMP $VERSION)"
+ESM="./dist/esm/index.js"
+MJS="./dist/mjs/loaded-$VERSION_BUMP.mjs"
+
+rm -rf dist
+tsc -b
+npx rollup $ESM --context this --file $MJS -f esm
+npx terser $MJS --compress -m reserved=['lid','lid_'] -o $MJS

@@ -1,0 +1,59 @@
+{
+  "name": "@loaded/loaded",
+  "version": "0.0.1",
+  "description": "Dynamic module loader 🌊🏄",
+  "main": "dist/cjs/index.js",
+  "scripts": {
+    "build": "./bin/build",
+    "release": "./bin/release",
+    "test": "mocha",
+    "update": "ncu -u"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/winton/loaded.git"
+  },
+  "author": " <>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/winton/loaded/issues"
+  },
+  "homepage": "https://github.com/winton/loaded#readme",
+  "devDependencies": {
+    "@types/mocha": "5.2.7",
+    "@types/node": "12.12.5",
+    "@typescript-eslint/eslint-plugin": "2.6.0",
+    "@typescript-eslint/parser": "2.6.0",
+    "eslint": "6.6.0",
+    "eslint-config-prettier": "6.5.0",
+    "eslint-plugin-prettier": "3.1.1",
+    "expect": "24.9.0",
+    "husky": "3.0.9",
+    "lint-staged": "9.4.2",
+    "mocha": "6.2.2",
+    "npm-check-updates": "3.1.26",
+    "prettier": "1.18.2",
+    "release-it": "12.4.3",
+    "rollup": "1.26.2",
+    "semver": "6.3.0",
+    "terser": "4.3.9",
+    "ts-node": "8.4.1",
+    "typescript": "3.6.4"
+  },
+  "dependencies": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged && npm test"
+    }
+  },
+  "lint-staged": {
+    "*.{css,json,md}": [
+      "prettier --write",
+      "git add"
+    ],
+    "*.{js,jsx,ts}": [
+      "eslint --ignore-path .gitignore --fix",
+      "git add"
+    ]
+  }
+}

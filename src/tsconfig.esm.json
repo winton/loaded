@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "es2015",
+    "outDir": "../dist/esm",
+    "rootDir": ".",
+    "target": "es5"
+  },
+  "extends": "../tsconfig-base.json"
+}
