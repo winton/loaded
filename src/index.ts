@@ -12,7 +12,9 @@ export class Loaded {
       if (lib.then) {
         this.pending[libName] = lib
           .then((lib: any) => this.attach(libName, lib))
-          .then((lib: any) => this.callback(libName, lib))
+          .then((lib: any) =>
+            this.callback("loaded", libName, lib)
+          )
       } else {
         this.loaded[libName] = lib
       }
@@ -24,10 +26,14 @@ export class Loaded {
         const promise = this.attach(libName, lib)
         if (promise.then) {
           this.pending[libName] = promise.then((lib: any) =>
-            this.callback(libName, lib)
+            this.callback("loaded", libName, lib)
           )
         } else {
-          const promise = this.callback(libName, lib)
+          const promise = this.callback(
+            "loaded",
+            libName,
+            lib
+          )
           if (promise && promise.then) {
             this.pending[libName] = promise
           }
@@ -65,13 +71,29 @@ export class Loaded {
 
       if (Object.keys(this.loaded).indexOf(key) > -1) {
         lib[key] = this.loaded[key]
-        continue
-      }
-
-      if (Object.keys(this.pending).indexOf(key) > -1) {
+        const out = this.callback(
+          "loadedBy",
+          key,
+          this.loaded[key],
+          libName,
+          lib
+        )
+        if (out && out.then) {
+          attaches.push(out)
+        }
+      } else if (
+        Object.keys(this.pending).indexOf(key) > -1
+      ) {
         attaches.push(
           this.pending[key].then(() => {
             lib[key] = this.loaded[key]
+            return this.callback(
+              "loadedBy",
+              key,
+              this.loaded[key],
+              libName,
+              lib
+            )
           })
         )
       }
@@ -84,9 +106,14 @@ export class Loaded {
     }
   }
 
-  callback(libName: string, lib: any): any | Promise<any> {
-    if (lib.loaded) {
-      return lib.loaded(libName, this.loaded)
+  callback(
+    cb: string,
+    libName: string,
+    lib: any,
+    ...args: any[]
+  ): any | Promise<any> {
+    if (lib[cb]) {
+      return lib[cb](libName, this.loaded, ...args)
     }
   }
 }

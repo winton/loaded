@@ -33,7 +33,7 @@ it("loads asynchronous libraries", async () => {
   expect(b.a).toEqual(a)
 })
 
-it("calls callback with correct args", async () => {
+it("calls loaded callback with correct args", async () => {
   expect.assertions(6)
 
   class A {
@@ -68,7 +68,7 @@ it("calls callback with correct args", async () => {
   load({ a, b })
 })
 
-it("calls async callback on sync load", async () => {
+it("calls async loaded callback on sync load", async () => {
   expect.assertions(1)
 
   const a = {
@@ -85,12 +85,90 @@ it("calls async callback on sync load", async () => {
   await load({ a, b })
 })
 
-it("calls async callback on async load", async () => {
+it("calls async loaded callback on async load", async () => {
   expect.assertions(1)
 
   const a = {
     b: null,
     loaded: async (): Promise<void> => {
+      await delay(1)
+      expect(true).toBeTruthy()
+    },
+  }
+  const b = {
+    a: null,
+  }
+
+  await load({ a: delay(1, a), b: delay(1, b) })
+})
+
+it("calls loadedBy callback with correct args", async () => {
+  expect.assertions(10)
+
+  class A {
+    b = null
+
+    loadedBy(
+      name: string,
+      loaded: Record<string, any>,
+      byName: string,
+      byLib: any
+    ): void {
+      expect(name).toBe("a")
+      expect(loaded.a).toBe(this)
+      expect(loaded.b).toBe(this.b)
+      expect(byName).toBe("b")
+      expect(byLib).toBe(this.b)
+    }
+  }
+
+  const a = new A()
+
+  class B {
+    a = null
+
+    loadedBy(
+      name: string,
+      loaded: Record<string, any>,
+      byName: string,
+      byLib: any
+    ): void {
+      expect(name).toBe("b")
+      expect(loaded.a).toBe(a)
+      expect(loaded.b).toBe(this)
+      expect(byName).toBe("a")
+      expect(byLib).toBe(a)
+    }
+  }
+
+  const b = new B()
+
+  load({ a, b })
+})
+
+it("calls async loadedBy callback on sync load", async () => {
+  expect.assertions(1)
+
+  const a = {
+    b: null,
+    loadedBy: async (): Promise<void> => {
+      await delay(1)
+      expect(true).toBeTruthy()
+    },
+  }
+  const b = {
+    a: null,
+  }
+
+  await load({ a, b })
+})
+
+it("calls async loadedBy callback on async load", async () => {
+  expect.assertions(1)
+
+  const a = {
+    b: null,
+    loadedBy: async (): Promise<void> => {
       await delay(1)
       expect(true).toBeTruthy()
     },
