@@ -50,6 +50,11 @@ export class Loaded {
     }
   }
 
+  public reset(): void {
+    this.loaded = {}
+    this.pending = {}
+  }
+
   private attach(
     libName: string,
     lib: any
@@ -106,7 +111,7 @@ export class Loaded {
     }
   }
 
-  callback(
+  private callback(
     cb: string,
     libName: string,
     lib: any,

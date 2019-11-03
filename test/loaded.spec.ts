@@ -1,11 +1,13 @@
 import expect from "./expect"
-import load from "../src"
+import load, { instance } from "../src"
 
 function delay(t: number, v?: any): Promise<any> {
   return new Promise((resolve): void => {
     setTimeout(resolve.bind(null, v), t)
   })
 }
+
+beforeEach(instance.reset)
 
 it("loads synchronous libraries", () => {
   const a = {
