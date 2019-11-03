@@ -124,4 +124,7 @@ export class Loaded {
 }
 
 export const instance = new Loaded()
-export default instance.load.bind(instance)
+
+export default instance.load.bind(
+  instance
+) as typeof instance.load
