@@ -1,5 +1,5 @@
 import expect from "./expect"
-import load, { instance } from "../src"
+import load, { instance, LoadedEvent } from "../src"
 
 function delay(t: number, v?: any): Promise<any> {
   return new Promise((resolve): void => {
@@ -41,10 +41,7 @@ it("calls loaded callback with correct args", async () => {
   class A {
     b = null
 
-    loaded(
-      name: string,
-      loaded: Record<string, any>
-    ): void {
+    loaded({ name, loaded }: LoadedEvent): void {
       expect(name).toBe("a")
       expect(loaded.a).toBe(this)
       expect(loaded.b).toBe(this.b)
@@ -54,10 +51,7 @@ it("calls loaded callback with correct args", async () => {
   class B {
     a = null
 
-    loaded(
-      name: string,
-      loaded: Record<string, any>
-    ): void {
+    loaded({ name, loaded }): void {
       expect(name).toBe("b")
       expect(loaded.a).toBe(this.a)
       expect(loaded.b).toBe(this)
@@ -110,17 +104,12 @@ it("calls loadedBy callback with correct args", async () => {
   class A {
     b = null
 
-    loadedBy(
-      name: string,
-      loaded: Record<string, any>,
-      byName: string,
-      byLib: any
-    ): void {
+    loadedBy({ name, loaded, byName, by }): void {
       expect(name).toBe("a")
       expect(loaded.a).toBe(this)
       expect(loaded.b).toBe(this.b)
       expect(byName).toBe("b")
-      expect(byLib).toBe(this.b)
+      expect(by).toBe(this.b)
     }
   }
 
@@ -129,17 +118,12 @@ it("calls loadedBy callback with correct args", async () => {
   class B {
     a = null
 
-    loadedBy(
-      name: string,
-      loaded: Record<string, any>,
-      byName: string,
-      byLib: any
-    ): void {
+    loadedBy({ name, loaded, byName, by }): void {
       expect(name).toBe("b")
       expect(loaded.a).toBe(a)
       expect(loaded.b).toBe(this)
       expect(byName).toBe("a")
-      expect(byLib).toBe(a)
+      expect(by).toBe(a)
     }
   }
 

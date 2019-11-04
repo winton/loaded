@@ -2,40 +2,43 @@ export type LoadedLoadResponse =
   | Record<string, any>
   | Promise<Record<string, any>>
 
+export interface LoadedEvent {
+  name: string
+  loaded: Record<string, any>
+  byName?: string
+  by?: any
+}
+
 export class Loaded {
   loaded: Record<string, any> = {}
   pending: Record<string, any> = {}
 
   load(libs: Record<string, any>): LoadedLoadResponse {
-    for (const libName in libs) {
-      const lib = libs[libName]
+    for (const name in libs) {
+      const lib = libs[name]
       if (lib.then) {
-        this.pending[libName] = lib
-          .then((lib: any) => this.attach(libName, lib))
+        this.pending[name] = lib
+          .then((lib: any) => this.attach(name, lib))
           .then((lib: any) =>
-            this.callback("loaded", libName, lib)
+            this.callback("loaded", name, lib)
           )
       } else {
-        this.loaded[libName] = lib
+        this.loaded[name] = lib
       }
     }
 
-    for (const libName in libs) {
-      const lib = libs[libName]
+    for (const name in libs) {
+      const lib = libs[name]
       if (!lib.then) {
-        const promise = this.attach(libName, lib)
+        const promise = this.attach(name, lib)
         if (promise.then) {
-          this.pending[libName] = promise.then((lib: any) =>
-            this.callback("loaded", libName, lib)
+          this.pending[name] = promise.then((lib: any) =>
+            this.callback("loaded", name, lib)
           )
         } else {
-          const promise = this.callback(
-            "loaded",
-            libName,
-            lib
-          )
+          const promise = this.callback("loaded", name, lib)
           if (promise && promise.then) {
-            this.pending[libName] = promise
+            this.pending[name] = promise
           }
         }
       }
@@ -56,7 +59,7 @@ export class Loaded {
   }
 
   private attach(
-    libName: string,
+    name: string,
     lib: any
   ): any | Promise<any> {
     if (lib.default) {
@@ -65,7 +68,12 @@ export class Loaded {
 
     const attaches = []
 
-    this.loaded[libName] = lib
+    const byArgs = {
+      byName: name,
+      by: lib,
+    }
+
+    this.loaded[name] = lib
 
     for (const key in lib) {
       const value = lib[key]
@@ -80,8 +88,7 @@ export class Loaded {
           "loadedBy",
           key,
           this.loaded[key],
-          libName,
-          lib
+          byArgs
         )
         if (out && out.then) {
           attaches.push(out)
@@ -96,8 +103,7 @@ export class Loaded {
               "loadedBy",
               key,
               this.loaded[key],
-              libName,
-              lib
+              byArgs
             )
           })
         )
@@ -113,12 +119,12 @@ export class Loaded {
 
   private callback(
     cb: string,
-    libName: string,
+    name: string,
     lib: any,
-    ...args: any[]
+    args: Record<string, any> = {}
   ): any | Promise<any> {
     if (lib[cb]) {
-      return lib[cb](libName, this.loaded, ...args)
+      return lib[cb]({ ...args, name, loaded: this.loaded })
     }
   }
 }
