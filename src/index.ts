@@ -2,6 +2,12 @@ export type LoadedLoadResponse =
   | Record<string, any>
   | Promise<Record<string, any>>
 
+export interface LoadedAttachResponse {
+  keys: string[]
+  lib: any | Promise<any>
+  name: string
+}
+
 export interface LoadedEvent {
   name: string
   loaded: Record<string, any>
@@ -16,12 +22,11 @@ export class Loaded {
   load(libs: Record<string, any>): LoadedLoadResponse {
     for (const name in libs) {
       const lib = libs[name]
-      if (lib.then) {
+
+      if (lib instanceof Promise) {
         this.pending[name] = lib
           .then((lib: any) => this.attach(name, lib))
-          .then((lib: any) =>
-            this.callback("loaded", name, lib)
-          )
+          .then(this.callbacks.bind(this))
       } else {
         this.loaded[name] = lib
       }
@@ -29,16 +34,24 @@ export class Loaded {
 
     for (const name in libs) {
       const lib = libs[name]
-      if (!lib.then) {
-        const promise = this.attach(name, lib)
-        if (promise.then) {
-          this.pending[name] = promise.then((lib: any) =>
-            this.callback("loaded", name, lib)
+
+      if (!(lib instanceof Promise)) {
+        const attachOut = this.attach(name, lib)
+
+        if (attachOut instanceof Promise) {
+          this.pending[name] = attachOut.then(
+            this.callbacks.bind(this)
           )
         } else {
-          const promise = this.callback("loaded", name, lib)
-          if (promise && promise.then) {
-            this.pending[name] = promise
+          const { keys } = attachOut
+          const callbacksOut = this.callbacks({
+            keys,
+            lib,
+            name,
+          })
+
+          if (callbacksOut instanceof Promise) {
+            this.pending[name] = callbacksOut
           }
         }
       }
@@ -61,17 +74,13 @@ export class Loaded {
   private attach(
     name: string,
     lib: any
-  ): any | Promise<any> {
+  ): LoadedAttachResponse | Promise<LoadedAttachResponse> {
     if (lib.default) {
       lib = lib.default
     }
 
-    const attaches = []
-
-    const byArgs = {
-      byName: name,
-      by: lib,
-    }
+    const attaches: Promise<any>[] = []
+    const keys: string[] = []
 
     this.loaded[name] = lib
 
@@ -84,36 +93,27 @@ export class Loaded {
 
       if (Object.keys(this.loaded).indexOf(key) > -1) {
         lib[key] = this.loaded[key]
-        const out = this.callback(
-          "loadedBy",
-          key,
-          this.loaded[key],
-          byArgs
-        )
-        if (out && out.then) {
-          attaches.push(out)
-        }
+        keys.push(key)
       } else if (
         Object.keys(this.pending).indexOf(key) > -1
       ) {
         attaches.push(
           this.pending[key].then(() => {
             lib[key] = this.loaded[key]
-            return this.callback(
-              "loadedBy",
-              key,
-              this.loaded[key],
-              byArgs
-            )
+            keys.push(key)
           })
         )
       }
     }
 
     if (attaches.length) {
-      return Promise.all(attaches).then(() => lib)
+      return Promise.all(attaches).then(() => ({
+        keys,
+        lib,
+        name,
+      }))
     } else {
-      return lib
+      return { keys, lib, name }
     }
   }
 
@@ -126,6 +126,64 @@ export class Loaded {
     if (lib[cb]) {
       return lib[cb]({ ...args, name, loaded: this.loaded })
     }
+  }
+
+  private callbacks({
+    keys,
+    lib,
+    name,
+  }: LoadedAttachResponse): Promise<any> {
+    const promises = []
+
+    const callbackOut = this.callback("loaded", name, lib)
+
+    if (callbackOut instanceof Promise) {
+      promises.push(callbackOut)
+    }
+
+    for (const key of keys) {
+      if (callbackOut instanceof Promise) {
+        promises.push(
+          callbackOut.then(() =>
+            this.byCallback({ key, lib, name })
+          )
+        )
+      } else {
+        const out = this.byCallback({
+          key,
+          lib,
+          name,
+        })
+
+        if (out instanceof Promise) {
+          promises.push(out)
+        }
+      }
+    }
+
+    if (promises.length) {
+      return Promise.all(promises)
+    }
+  }
+
+  private byCallback({
+    key,
+    lib,
+    name,
+  }: {
+    key: string
+    lib: any
+    name: string
+  }): Promise<any> {
+    return this.callback(
+      "loadedBy",
+      key,
+      this.loaded[key],
+      {
+        byName: name,
+        by: lib,
+      }
+    )
   }
 }
 
