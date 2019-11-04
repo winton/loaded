@@ -7,7 +7,7 @@ function delay(t: number, v?: any): Promise<any> {
   })
 }
 
-beforeEach(instance.reset)
+beforeEach(() => instance.reset())
 
 it("loads synchronous libraries", () => {
   const a = {
