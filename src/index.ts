@@ -20,17 +20,24 @@ export class Loaded {
   pending: Record<string, any> = {}
 
   load(libs: Record<string, any>): LoadedLoadResponse {
+    const loadPending: Record<string, any> = {}
+
     for (const name in libs) {
       const lib = libs[name]
 
       if (lib instanceof Promise) {
-        this.pending[name] = lib
-          .then((lib: any) => this.attach(name, lib))
-          .then(this.callbacks.bind(this))
+        this.pending[name] = lib.then((lib: any) =>
+          this.attach(name, lib)
+        )
+        loadPending[name] = this.pending[name].then(
+          this.callbacks.bind(this)
+        )
       } else {
         this.loaded[name] = lib
       }
     }
+
+    const keys: Record<string, string[]> = {}
 
     for (const name in libs) {
       const lib = libs[name]
@@ -39,25 +46,32 @@ export class Loaded {
         const attachOut = this.attach(name, lib)
 
         if (attachOut instanceof Promise) {
-          this.pending[name] = attachOut.then(
-            this.callbacks.bind(this)
-          )
+          this.pending[name] = attachOut
         } else {
-          const { keys } = attachOut
-          const callbacksOut = this.callbacks({
-            keys,
-            lib,
-            name,
-          })
-
-          if (callbacksOut instanceof Promise) {
-            this.pending[name] = callbacksOut
-          }
+          const { keys: k } = attachOut
+          keys[name] = keys[name] || []
+          keys[name] = keys[name].concat(k)
         }
       }
     }
 
-    const pending = Object.values(this.pending)
+    for (const name in libs) {
+      const lib = libs[name]
+
+      if (!this.pending[name]) {
+        const callbacksOut = this.callbacks({
+          keys: keys[name],
+          lib,
+          name,
+        })
+
+        if (callbacksOut instanceof Promise) {
+          loadPending[name] = callbacksOut
+        }
+      }
+    }
+
+    const pending = Object.values(loadPending)
 
     if (pending.length) {
       return Promise.all(pending).then(() => this.loaded)
@@ -144,7 +158,13 @@ export class Loaded {
     for (const key of keys) {
       if (callbackOut instanceof Promise) {
         promises.push(
-          callbackOut.then(() =>
+          callbackOut
+            .then(() => this.pending[key])
+            .then(() => this.byCallback({ key, lib, name }))
+        )
+      } else if (this.pending[key]) {
+        promises.push(
+          this.pending[key].then(() =>
             this.byCallback({ key, lib, name })
           )
         )

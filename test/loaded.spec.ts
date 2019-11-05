@@ -133,35 +133,61 @@ it("calls loadedBy callback with correct args", async () => {
 })
 
 it("calls async loadedBy callback on sync load", async () => {
-  expect.assertions(1)
+  expect.assertions(4)
 
-  const a = {
-    b: null,
-    loadedBy: async (): Promise<void> => {
-      await delay(1)
-      expect(true).toBeTruthy()
-    },
+  let b = null
+
+  class A {
+    b = null
+
+    async loadedBy(): Promise<void> {
+      expect(this.b).not.toBe(null)
+      expect(this.b).toBe(b)
+    }
   }
-  const b = {
-    a: null,
+
+  const a = new A()
+
+  class B {
+    a = null
+
+    async loadedBy(): Promise<void> {
+      expect(this.a).not.toBe(null)
+      expect(this.a).toBe(a)
+    }
   }
+
+  b = new B()
 
   await load({ a, b })
 })
 
 it("calls async loadedBy callback on async load", async () => {
-  expect.assertions(1)
+  expect.assertions(4)
 
-  const a = {
-    b: null,
-    loadedBy: async (): Promise<void> => {
-      await delay(1)
-      expect(true).toBeTruthy()
-    },
+  let b = null
+
+  class A {
+    b = null
+
+    async loadedBy(): Promise<void> {
+      expect(this.b).not.toBe(null)
+      expect(this.b).toBe(b)
+    }
   }
-  const b = {
-    a: null,
+
+  const a = new A()
+
+  class B {
+    a = null
+
+    async loadedBy(): Promise<void> {
+      expect(this.a).not.toBe(null)
+      expect(this.a).toBe(a)
+    }
   }
+
+  b = new B()
 
   await load({ a: delay(1, a), b: delay(1, b) })
 })
