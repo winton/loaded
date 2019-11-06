@@ -30,6 +30,7 @@ export class Loaded {
 
   reset(): void {
     this.loaded = {}
+    this.loadedByQueue = {}
     this.pendingRetrieved = {}
     this.retrieved = {}
   }
@@ -41,19 +42,19 @@ export class Loaded {
     for (const libName in libs) {
       const lib = libs[libName]
 
-      const set = (lib: any): void => {
-        this.pendingRetrieved[libName] = undefined
-        this.retrieved[libName] = lib.default || lib
-      }
-
       if (lib.then) {
-        this.pendingRetrieved[libName] = libs[libName].then(
-          set
+        this.pendingRetrieved[libName] = lib.then(
+          (lib: any) => this.setRetrieved(libName, lib)
         )
       } else {
-        set(libs[libName])
+        this.setRetrieved(libName, lib)
       }
     }
+  }
+
+  private setRetrieved(libName: string, lib: any): void {
+    this.pendingRetrieved[libName] = undefined
+    this.retrieved[libName] = lib.default || lib
   }
 
   private loadLibs(
@@ -63,35 +64,38 @@ export class Loaded {
     return new Fn2(
       Object.keys(libs).reduce((memo, libName) => {
         memo[libName] = (): Fn2Out =>
-          new Fn2(
-            {
-              [libName]: (): any =>
-                this.pendingRetrieved[libName],
-            },
-            {
-              waitRetrieved: this.waitRetrieved.bind(this),
-            },
-            {
-              attachRetrieved: this.attachRetrieved.bind(
-                this
-              ),
-            },
-            {
-              loadedCallback: this.loadedCallback.bind(
-                this
-              ),
-            },
-            {
-              // eslint-disable-next-line max-len
-              loadedByCallbacks: this.loadedByCallbacks.bind(
-                this
-              ),
-            }
-          ).run([Fn2, libs, libName])
+          this.loadLib(Fn2, libs, libName)
 
         return memo
       }, {})
     ).run([Fn2, libs])
+  }
+
+  private loadLib(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>,
+    libName: string
+  ): Fn2Out {
+    return new Fn2(
+      {
+        [libName]: (): any =>
+          this.pendingRetrieved[libName],
+      },
+      {
+        waitRetrieved: this.waitRetrieved.bind(this),
+      },
+      {
+        attachRetrieved: this.attachRetrieved.bind(this),
+      },
+      {
+        loadedCallback: this.loadedCallback.bind(this),
+      },
+      {
+        loadedByCallbacks: this.loadedByCallbacks.bind(
+          this
+        ),
+      }
+    ).run([Fn2, libs, libName])
   }
 
   private waitRetrieved(
@@ -144,6 +148,7 @@ export class Loaded {
       loaded: this.loaded,
       name: libName,
     }
+
     return new Fn2(
       {
         loaded: (): any => {
@@ -169,48 +174,76 @@ export class Loaded {
     const queue = this.loadedByQueue[libName] || []
 
     return new Fn2(
-      queue.reduce((memo, event) => {
-        const lib = this.loaded[event.name]
-
-        if (lib.loadedBy) {
-          memo[
-            `${event.byName} -> ${event.name}`
-          ] = (): any => {
-            return lib.loadedBy(event)
-          }
-        }
-
-        return memo
-      }, {}),
+      queue.reduce(
+        this.processLoadedByQueue.bind(this),
+        {}
+      ),
+      {
+        clearLoadedByQueue: (): void => {
+          this.loadedByQueue[libName] = undefined
+        },
+      },
       Object.keys(libs).reduce((memo, depName) => {
-        const dep = this.retrieved[depName]
-
-        if (
-          depName !== libName &&
-          lib[depName] === dep &&
-          dep.loadedBy
-        ) {
-          const event: LoadedEvent = {
-            loaded: this.loaded,
-            name: depName,
-            by: lib,
-            byName: libName,
-          }
-
-          if (this.loaded[depName]) {
-            memo[libName] = (): any => dep.loadedBy(event)
-          } else {
-            this.loadedByQueue[depName] =
-              this.loadedByQueue[depName] || []
-            this.loadedByQueue[
-              depName
-            ] = this.loadedByQueue[depName].concat(event)
-          }
-        }
-
+        this.loadedByEnqueueOrCall(
+          memo,
+          depName,
+          lib,
+          libName
+        )
         return memo
       }, {})
     ).run()
+  }
+
+  private processLoadedByQueue(
+    memo: Record<string, any>,
+    event: LoadedEvent
+  ): Record<string, any> {
+    const lib = this.loaded[event.name]
+
+    if (lib.loadedBy) {
+      memo[
+        `${event.byName} -> ${event.name}`
+      ] = (): any => {
+        return lib.loadedBy(event)
+      }
+    }
+
+    return memo
+  }
+
+  private loadedByEnqueueOrCall(
+    memo: Record<string, any>,
+    depName: string,
+    lib: any,
+    libName: string
+  ): void {
+    const dep = this.retrieved[depName]
+
+    if (
+      depName === libName ||
+      lib[depName] !== dep ||
+      !dep.loadedBy
+    ) {
+      return
+    }
+
+    const event: LoadedEvent = {
+      loaded: this.loaded,
+      name: depName,
+      by: lib,
+      byName: libName,
+    }
+
+    if (this.loaded[depName]) {
+      memo[libName] = (): any => dep.loadedBy(event)
+    } else {
+      this.loadedByQueue[depName] =
+        this.loadedByQueue[depName] || []
+      this.loadedByQueue[depName] = this.loadedByQueue[
+        depName
+      ].concat(event)
+    }
   }
 }
 
