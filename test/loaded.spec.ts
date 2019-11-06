@@ -1,6 +1,6 @@
 import Fn2 from "fn2"
 import expect from "./expect"
-import load, { instance, LoadedEvent } from "../src/index2"
+import load, { instance } from "../src"
 
 function delay(t: number, v?: any): Promise<any> {
   return new Promise((resolve): void => {

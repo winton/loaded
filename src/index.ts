@@ -1,12 +1,4 @@
-export type LoadedLoadResponse =
-  | Record<string, any>
-  | Promise<Record<string, any>>
-
-export interface LoadedAttachResponse {
-  keys: string[]
-  lib: any | Promise<any>
-  name: string
-}
+import Fn2Class, { Fn2Out } from "fn2"
 
 export interface LoadedEvent {
   name: string
@@ -17,193 +9,241 @@ export interface LoadedEvent {
 
 export class Loaded {
   loaded: Record<string, any> = {}
-  pending: Record<string, any> = {}
+  loadedByQueue: Record<string, LoadedEvent[]> = {}
+  pendingRetrieved: Record<string, any> = {}
+  retrieved: Record<string, any> = {}
 
-  load(libs: Record<string, any>): LoadedLoadResponse {
-    const loadPending: Record<string, any> = {}
+  load(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>
+  ): Fn2Out {
+    this.setupLoad(Fn2, libs)
 
-    for (const name in libs) {
-      const lib = libs[name]
+    const out = this.loadLibs(Fn2, libs)
 
-      if (lib instanceof Promise) {
-        this.pending[name] = lib.then((lib: any) =>
-          this.attach(name, lib)
-        )
-        loadPending[name] = this.pending[name].then(
-          this.callbacks.bind(this)
+    if (out.then) {
+      return out.then(() => this.retrieved)
+    } else {
+      return this.retrieved
+    }
+  }
+
+  reset(): void {
+    this.loaded = {}
+    this.loadedByQueue = {}
+    this.pendingRetrieved = {}
+    this.retrieved = {}
+  }
+
+  private setupLoad(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>
+  ): void {
+    for (const libName in libs) {
+      const lib = libs[libName]
+
+      if (lib.then) {
+        this.pendingRetrieved[libName] = lib.then(
+          (lib: any) => this.setRetrieved(libName, lib)
         )
       } else {
-        this.loaded[name] = lib
+        this.setRetrieved(libName, lib)
       }
-    }
-
-    const keys: Record<string, string[]> = {}
-
-    for (const name in libs) {
-      const lib = libs[name]
-
-      if (!(lib instanceof Promise)) {
-        const attachOut = this.attach(name, lib)
-
-        if (attachOut instanceof Promise) {
-          this.pending[name] = attachOut
-        } else {
-          const { keys: k } = attachOut
-          keys[name] = keys[name] || []
-          keys[name] = keys[name].concat(k)
-        }
-      }
-    }
-
-    for (const name in libs) {
-      const lib = libs[name]
-
-      if (!this.pending[name]) {
-        const callbacksOut = this.callbacks({
-          keys: keys[name],
-          lib,
-          name,
-        })
-
-        if (callbacksOut instanceof Promise) {
-          loadPending[name] = callbacksOut
-        }
-      }
-    }
-
-    const pending = Object.values(loadPending)
-
-    if (pending.length) {
-      return Promise.all(pending).then(() => this.loaded)
-    } else {
-      return this.loaded
     }
   }
 
-  public reset(): void {
-    this.loaded = {}
-    this.pending = {}
+  private setRetrieved(libName: string, lib: any): void {
+    this.pendingRetrieved[libName] = undefined
+    this.retrieved[libName] = lib.default || lib
   }
 
-  private attach(
-    name: string,
-    lib: any
-  ): LoadedAttachResponse | Promise<LoadedAttachResponse> {
-    if (lib.default) {
-      lib = lib.default
-    }
+  private loadLibs(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>
+  ): Fn2Out {
+    return new Fn2(
+      Object.keys(libs).reduce((memo, libName) => {
+        memo[libName] = (): Fn2Out =>
+          this.loadLib(Fn2, libs, libName)
 
-    const attaches: Promise<any>[] = []
-    const keys: string[] = []
+        return memo
+      }, {})
+    ).run([Fn2, libs])
+  }
 
-    this.loaded[name] = lib
+  private loadLib(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>,
+    libName: string
+  ): Fn2Out {
+    return new Fn2(
+      {
+        [libName]: (): any =>
+          this.pendingRetrieved[libName],
+      },
+      {
+        waitRetrieved: this.waitRetrieved.bind(this),
+      },
+      {
+        attachRetrieved: this.attachRetrieved.bind(this),
+      },
+      {
+        loadedCallback: this.loadedCallback.bind(this),
+      },
+      {
+        loadedByCallbacks: this.loadedByCallbacks.bind(
+          this
+        ),
+      }
+    ).run([Fn2, libs, libName])
+  }
 
-    for (const key in lib) {
-      const value = lib[key]
+  private waitRetrieved(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>,
+    libName: string
+  ): Fn2Out {
+    const lib = this.retrieved[libName]
 
-      if (value !== null) {
+    return new Fn2(
+      Object.keys(libs).reduce((memo, depName) => {
+        if (
+          depName !== libName &&
+          lib[depName] === null &&
+          this.pendingRetrieved[depName]
+        ) {
+          memo[libName] = (): any =>
+            this.pendingRetrieved[depName]
+        }
+
+        return memo
+      }, {})
+    ).run()
+  }
+
+  private attachRetrieved(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>,
+    libName: string
+  ): void {
+    const lib = this.retrieved[libName]
+
+    for (const depName in libs) {
+      if (depName === libName || lib[depName] !== null) {
         continue
       }
 
-      if (Object.keys(this.loaded).indexOf(key) > -1) {
-        lib[key] = this.loaded[key]
-        keys.push(key)
-      } else if (
-        Object.keys(this.pending).indexOf(key) > -1
-      ) {
-        attaches.push(
-          this.pending[key].then(() => {
-            lib[key] = this.loaded[key]
-            keys.push(key)
-          })
-        )
-      }
-    }
-
-    if (attaches.length) {
-      return Promise.all(attaches).then(() => ({
-        keys,
-        lib,
-        name,
-      }))
-    } else {
-      return { keys, lib, name }
+      lib[depName] = this.retrieved[depName]
     }
   }
 
-  private callback(
-    cb: string,
-    name: string,
-    lib: any,
-    args: Record<string, any> = {}
-  ): any | Promise<any> {
-    if (lib[cb]) {
-      return lib[cb]({ ...args, name, loaded: this.loaded })
-    }
-  }
+  private loadedCallback(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>,
+    libName: string
+  ): Fn2Out {
+    const lib = this.retrieved[libName]
 
-  private callbacks({
-    keys,
-    lib,
-    name,
-  }: LoadedAttachResponse): Promise<any> {
-    const promises = []
-
-    const callbackOut = this.callback("loaded", name, lib)
-
-    if (callbackOut instanceof Promise) {
-      promises.push(callbackOut)
+    const event: LoadedEvent = {
+      loaded: this.loaded,
+      name: libName,
     }
 
-    for (const key of keys) {
-      if (callbackOut instanceof Promise) {
-        promises.push(
-          callbackOut
-            .then(() => this.pending[key])
-            .then(() => this.byCallback({ key, lib, name }))
-        )
-      } else if (this.pending[key]) {
-        promises.push(
-          this.pending[key].then(() =>
-            this.byCallback({ key, lib, name })
-          )
-        )
-      } else {
-        const out = this.byCallback({
-          key,
-          lib,
-          name,
-        })
-
-        if (out instanceof Promise) {
-          promises.push(out)
-        }
-      }
-    }
-
-    if (promises.length) {
-      return Promise.all(promises)
-    }
-  }
-
-  private byCallback({
-    key,
-    lib,
-    name,
-  }: {
-    key: string
-    lib: any
-    name: string
-  }): Promise<any> {
-    return this.callback(
-      "loadedBy",
-      key,
-      this.loaded[key],
+    return new Fn2(
       {
-        byName: name,
-        by: lib,
+        loaded: (): any => {
+          if (lib.loaded) {
+            return lib.loaded(event)
+          }
+        },
+      },
+      {
+        setLoaded: (): void => {
+          this.loaded[libName] = this.retrieved[libName]
+        },
       }
-    )
+    ).run()
+  }
+
+  private loadedByCallbacks(
+    Fn2: typeof Fn2Class,
+    libs: Record<string, any>,
+    libName: string
+  ): Fn2Out {
+    const lib = this.retrieved[libName]
+    const queue = this.loadedByQueue[libName] || []
+
+    return new Fn2(
+      queue.reduce(
+        this.processLoadedByQueue.bind(this),
+        {}
+      ),
+      {
+        clearLoadedByQueue: (): void => {
+          this.loadedByQueue[libName] = undefined
+        },
+      },
+      Object.keys(libs).reduce((memo, depName) => {
+        this.loadedByEnqueueOrCall(
+          memo,
+          depName,
+          lib,
+          libName
+        )
+        return memo
+      }, {})
+    ).run()
+  }
+
+  private processLoadedByQueue(
+    memo: Record<string, any>,
+    event: LoadedEvent
+  ): Record<string, any> {
+    const lib = this.loaded[event.name]
+
+    if (lib.loadedBy) {
+      memo[
+        `${event.byName} -> ${event.name}`
+      ] = (): any => {
+        return lib.loadedBy(event)
+      }
+    }
+
+    return memo
+  }
+
+  private loadedByEnqueueOrCall(
+    memo: Record<string, any>,
+    depName: string,
+    lib: any,
+    libName: string
+  ): void {
+    const dep = this.retrieved[depName]
+
+    if (
+      depName === libName ||
+      lib[depName] !== dep ||
+      !dep.loadedBy
+    ) {
+      return
+    }
+
+    const event: LoadedEvent = {
+      loaded: this.loaded,
+      name: depName,
+      by: lib,
+      byName: libName,
+    }
+
+    if (this.loaded[depName]) {
+      memo[libName] = (): any => dep.loadedBy(event)
+    } else {
+      this.loadedByQueue[depName] =
+        this.loadedByQueue[depName] || []
+      this.loadedByQueue[depName] = this.loadedByQueue[
+        depName
+      ].concat(event)
+    }
   }
 }
 
