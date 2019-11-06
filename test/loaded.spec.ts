@@ -39,159 +39,160 @@ it("loads asynchronous libraries", async () => {
   expect(b.a).toEqual(a)
 })
 
-// it("calls loaded callback with correct args", async () => {
-//   expect.assertions(6)
+it("calls loaded callback with correct args", async () => {
+  expect.assertions(4)
 
-//   class A {
-//     b = null
+  let a: A = null
 
-//     loaded({ name, loaded }: LoadedEvent): void {
-//       expect(name).toBe("a")
-//       expect(loaded.a).toBe(this)
-//       expect(loaded.b).toBe(this.b)
-//     }
-//   }
+  class A {
+    b = null
 
-//   class B {
-//     a = null
+    loaded({ name, loaded }): void {
+      expect(name).toBe("a")
+      expect(loaded).toEqual({})
+    }
+  }
 
-//     loaded({ name, loaded }): void {
-//       expect(name).toBe("b")
-//       expect(loaded.a).toBe(this.a)
-//       expect(loaded.b).toBe(this)
-//     }
-//   }
+  class B {
+    a = null
 
-//   const a = new A()
-//   const b = new B()
+    loaded({ name, loaded }): void {
+      expect(name).toBe("b")
+      expect(loaded).toEqual({ a })
+    }
+  }
 
-//   load(Fn2, { a, b })
-// })
+  a = new A()
+  const b = new B()
 
-// it("calls async loaded callback on sync load", async () => {
-//   expect.assertions(1)
+  load(Fn2, { a, b })
+})
 
-//   const a = {
-//     b: null,
-//     loaded: async (): Promise<void> => {
-//       await delay(1)
-//       expect(true).toBeTruthy()
-//     },
-//   }
-//   const b = {
-//     a: null,
-//   }
+it("calls async loaded callback on sync load", async () => {
+  expect.assertions(1)
 
-//   await load({ a, b })
-// })
+  const a = {
+    b: null,
+    loaded: async (): Promise<void> => {
+      await delay(1)
+      expect(true).toBeTruthy()
+    },
+  }
 
-// it("calls async loaded callback on async load", async () => {
-//   expect.assertions(1)
+  const b = {
+    a: null,
+  }
 
-//   const a = {
-//     b: null,
-//     loaded: async (): Promise<void> => {
-//       await delay(1)
-//       expect(true).toBeTruthy()
-//     },
-//   }
-//   const b = {
-//     a: null,
-//   }
+  await load(Fn2, { a, b })
+})
 
-//   await load({ a: delay(1, a), b: delay(1, b) })
-// })
+it("calls async loaded callback on async load", async () => {
+  expect.assertions(1)
 
-// it("calls loadedBy callback with correct args", async () => {
-//   expect.assertions(10)
+  const a = {
+    b: null,
+    loaded: async (): Promise<void> => {
+      await delay(1)
+      expect(true).toBeTruthy()
+    },
+  }
+  const b = {
+    a: null,
+  }
 
-//   class A {
-//     b = null
+  await load(Fn2, { a: delay(1, a), b: delay(1, b) })
+})
 
-//     loadedBy({ name, loaded, byName, by }): void {
-//       expect(name).toBe("a")
-//       expect(loaded.a).toBe(this)
-//       expect(loaded.b).toBe(this.b)
-//       expect(byName).toBe("b")
-//       expect(by).toBe(this.b)
-//     }
-//   }
+it("calls loadedBy callback with correct args", async () => {
+  expect.assertions(10)
 
-//   const a = new A()
+  class A {
+    b = null
 
-//   class B {
-//     a = null
+    loadedBy({ name, loaded, byName, by }): void {
+      expect(name).toBe("a")
+      expect(loaded.a).toBe(this)
+      expect(loaded.b).toBe(this.b)
+      expect(byName).toBe("b")
+      expect(by).toBe(this.b)
+    }
+  }
 
-//     loadedBy({ name, loaded, byName, by }): void {
-//       expect(name).toBe("b")
-//       expect(loaded.a).toBe(a)
-//       expect(loaded.b).toBe(this)
-//       expect(byName).toBe("a")
-//       expect(by).toBe(a)
-//     }
-//   }
+  const a = new A()
 
-//   const b = new B()
+  class B {
+    a = null
 
-//   load({ a, b })
-// })
+    loadedBy({ name, loaded, byName, by }): void {
+      expect(name).toBe("b")
+      expect(loaded.a).toBe(a)
+      expect(loaded.b).toBe(this)
+      expect(byName).toBe("a")
+      expect(by).toBe(a)
+    }
+  }
 
-// it("calls async loadedBy callback on sync load", async () => {
-//   expect.assertions(4)
+  const b = new B()
 
-//   let b = null
+  load(Fn2, { a, b })
+})
 
-//   class A {
-//     b = null
+it("calls async loadedBy callback on sync load", async () => {
+  expect.assertions(4)
 
-//     async loadedBy(): Promise<void> {
-//       expect(this.b).not.toBe(null)
-//       expect(this.b).toBe(b)
-//     }
-//   }
+  let b = null
 
-//   const a = new A()
+  class A {
+    b = null
 
-//   class B {
-//     a = null
+    async loadedBy(): Promise<void> {
+      expect(this.b).not.toBe(null)
+      expect(this.b).toBe(b)
+    }
+  }
 
-//     async loadedBy(): Promise<void> {
-//       expect(this.a).not.toBe(null)
-//       expect(this.a).toBe(a)
-//     }
-//   }
+  const a = new A()
 
-//   b = new B()
+  class B {
+    a = null
 
-//   await load({ a, b })
-// })
+    async loadedBy(): Promise<void> {
+      expect(this.a).not.toBe(null)
+      expect(this.a).toBe(a)
+    }
+  }
 
-// it("calls async loadedBy callback on async load", async () => {
-//   expect.assertions(4)
+  b = new B()
 
-//   let b = null
+  await load(Fn2, { a, b })
+})
 
-//   class A {
-//     b = null
+it("calls async loadedBy callback on async load", async () => {
+  expect.assertions(4)
 
-//     async loadedBy(): Promise<void> {
-//       expect(this.b).not.toBe(null)
-//       expect(this.b).toBe(b)
-//     }
-//   }
+  let b = null
 
-//   const a = new A()
+  class A {
+    b = null
 
-//   class B {
-//     a = null
+    async loadedBy(): Promise<void> {
+      expect(this.b).not.toBe(null)
+      expect(this.b).toBe(b)
+    }
+  }
 
-//     async loadedBy(): Promise<void> {
-//       expect(this.a).not.toBe(null)
-//       expect(this.a).toBe(a)
-//     }
-//   }
+  const a = new A()
 
-//   b = new B()
+  class B {
+    a = null
 
-//   await load({ a: delay(1, a), b: delay(1, b) })
-// })
+    async loadedBy(): Promise<void> {
+      expect(this.a).not.toBe(null)
+      expect(this.a).toBe(a)
+    }
+  }
+
+  b = new B()
+
+  await load(Fn2, { a: delay(1, a), b: delay(1, b) })
+})

@@ -5,6 +5,7 @@
     "baseUrl": ".",
     "declaration": true,
     "esModuleInterop": true,
+    "moduleResolution": "node",
     "sourceMap": true
   }
 }
