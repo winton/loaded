@@ -1,4 +1,4 @@
-import fn2type, { Fn2Out } from "fn2"
+import fn2type, { fn2out } from "fn2"
 
 export interface LoadedEvent {
   name: string
@@ -16,7 +16,7 @@ export class Loaded {
   load(
     fn2: typeof fn2type,
     libs: Record<string, any>
-  ): Fn2Out {
+  ): fn2out {
     this.setupLoad(fn2, libs)
 
     const out = this.loadLibs(fn2, libs)
@@ -60,11 +60,11 @@ export class Loaded {
   private loadLibs(
     fn2: typeof fn2type,
     libs: Record<string, any>
-  ): Fn2Out {
+  ): fn2out {
     return fn2(
       [fn2, libs],
       Object.keys(libs).reduce((memo, libName) => {
-        memo[libName] = (): Fn2Out =>
+        memo[libName] = (): fn2out =>
           this.loadLib(fn2, libs, libName)
 
         return memo
@@ -76,7 +76,7 @@ export class Loaded {
     fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
-  ): Fn2Out {
+  ): fn2out {
     return fn2(
       [fn2, libs, libName],
       {
@@ -104,7 +104,7 @@ export class Loaded {
     fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
-  ): Fn2Out {
+  ): fn2out {
     const lib = this.retrieved[libName]
 
     return fn2(
@@ -143,7 +143,7 @@ export class Loaded {
     fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
-  ): Fn2Out {
+  ): fn2out {
     const lib = this.retrieved[libName]
 
     const event: LoadedEvent = {
@@ -171,7 +171,7 @@ export class Loaded {
     fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
-  ): Fn2Out {
+  ): fn2out {
     const lib = this.retrieved[libName]
     const queue = this.loadedByQueue[libName] || []
 
