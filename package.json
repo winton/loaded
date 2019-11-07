@@ -1,6 +1,6 @@
 {
   "name": "@loaded/loaded",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Dynamic module loader 🌊🏄",
   "main": "dist/cjs/index.js",
   "scripts": {
