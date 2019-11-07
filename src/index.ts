@@ -242,6 +242,7 @@ export class Loaded {
     } else {
       this.loadedByQueue[depName] =
         this.loadedByQueue[depName] || []
+
       this.loadedByQueue[depName] = this.loadedByQueue[
         depName
       ].concat(event)
