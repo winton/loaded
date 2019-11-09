@@ -251,6 +251,7 @@ export class Loaded {
 }
 
 export const instance = new Loaded()
+export { fn2 }
 
 export default instance.load.bind(
   instance
