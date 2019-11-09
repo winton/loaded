@@ -1,4 +1,4 @@
-import fn2type, { fn2out } from "fn2"
+import fn2, { fn2out } from "fn2"
 
 export interface LoadedEvent {
   name: string
@@ -8,18 +8,19 @@ export interface LoadedEvent {
 }
 
 export class Loaded {
-  loaded: Record<string, any> = {}
-  loadedByQueue: Record<string, LoadedEvent[]> = {}
-  pendingRetrieved: Record<string, any> = {}
-  retrieved: Record<string, any> = {}
+  loaded: Record<string, any>
+  loadedByQueue: Record<string, LoadedEvent[]>
+  pendingRetrieved: Record<string, any>
+  retrieved: Record<string, any>
 
-  load(
-    fn2: typeof fn2type,
-    libs: Record<string, any>
-  ): fn2out {
-    this.setupLoad(fn2, libs)
+  constructor() {
+    this.reset()
+  }
 
-    const out = this.loadLibs(fn2, libs)
+  load(libs: Record<string, any>): fn2out {
+    this.setupLoad(libs)
+
+    const out = this.loadLibs(libs)
 
     if (out.then) {
       return out.then(() => this.retrieved)
@@ -33,18 +34,19 @@ export class Loaded {
     this.loadedByQueue = {}
     this.pendingRetrieved = {}
     this.retrieved = {}
+
+    this.load({ fn2 })
   }
 
-  private setupLoad(
-    fn2: typeof fn2type,
-    libs: Record<string, any>
-  ): void {
+  private setupLoad(libs: Record<string, any>): void {
     for (const libName in libs) {
       const lib = libs[libName]
 
       if (lib.then) {
-        this.pendingRetrieved[libName] = lib.then(
-          (lib: any) => this.setRetrieved(libName, lib)
+        this.pendingRetrieved[
+          libName
+        ] = lib.then((lib: any) =>
+          this.setRetrieved(libName, lib)
         )
       } else {
         this.setRetrieved(libName, lib)
@@ -57,15 +59,12 @@ export class Loaded {
     this.retrieved[libName] = lib.default || lib
   }
 
-  private loadLibs(
-    fn2: typeof fn2type,
-    libs: Record<string, any>
-  ): fn2out {
-    return fn2(
-      [fn2, libs],
+  private loadLibs(libs: Record<string, any>): fn2out {
+    return fn2.run(
+      [libs],
       Object.keys(libs).reduce((memo, libName) => {
         memo[libName] = (): fn2out =>
-          this.loadLib(fn2, libs, libName)
+          this.loadLib(libs, libName)
 
         return memo
       }, {})
@@ -73,12 +72,11 @@ export class Loaded {
   }
 
   private loadLib(
-    fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
   ): fn2out {
-    return fn2(
-      [fn2, libs, libName],
+    return fn2.run(
+      [libs, libName],
       {
         [libName]: (): any =>
           this.pendingRetrieved[libName],
@@ -101,36 +99,37 @@ export class Loaded {
   }
 
   private waitRetrieved(
-    fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
   ): fn2out {
     const lib = this.retrieved[libName]
 
-    return fn2(
-      Object.keys(libs).reduce((memo, depName) => {
-        if (
-          depName !== libName &&
-          lib[depName] === null &&
-          this.pendingRetrieved[depName]
-        ) {
-          memo[libName] = (): any =>
+    return fn2.run(
+      Object.keys(this.pendingRetrieved).reduce(
+        (memo, depName) => {
+          if (
+            depName !== libName &&
+            lib[depName] === null &&
             this.pendingRetrieved[depName]
-        }
+          ) {
+            memo[libName] = (): any =>
+              this.pendingRetrieved[depName]
+          }
 
-        return memo
-      }, {})
+          return memo
+        },
+        {}
+      )
     )
   }
 
   private attachRetrieved(
-    fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
   ): void {
     const lib = this.retrieved[libName]
 
-    for (const depName in libs) {
+    for (const depName in this.pendingRetrieved) {
       if (depName === libName || lib[depName] !== null) {
         continue
       }
@@ -140,7 +139,6 @@ export class Loaded {
   }
 
   private loadedCallback(
-    fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
   ): fn2out {
@@ -151,7 +149,7 @@ export class Loaded {
       name: libName,
     }
 
-    return fn2(
+    return fn2.run(
       {
         loaded: (): any => {
           if (lib.loaded) {
@@ -168,14 +166,13 @@ export class Loaded {
   }
 
   private loadedByCallbacks(
-    fn2: typeof fn2type,
     libs: Record<string, any>,
     libName: string
   ): fn2out {
     const lib = this.retrieved[libName]
     const queue = this.loadedByQueue[libName] || []
 
-    return fn2(
+    return fn2.run(
       queue.reduce(
         this.processLoadedByQueue.bind(this),
         {}
@@ -185,15 +182,18 @@ export class Loaded {
           this.loadedByQueue[libName] = undefined
         },
       },
-      Object.keys(libs).reduce((memo, depName) => {
-        this.loadedByEnqueueOrCall(
-          memo,
-          depName,
-          lib,
-          libName
-        )
-        return memo
-      }, {})
+      Object.keys(this.pendingRetrieved).reduce(
+        (memo, depName) => {
+          this.loadedByEnqueueOrCall(
+            memo,
+            depName,
+            lib,
+            libName
+          )
+          return memo
+        },
+        {}
+      )
     )
   }
 

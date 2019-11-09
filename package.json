@@ -21,27 +21,30 @@
   "homepage": "https://github.com/winton/loaded#readme",
   "devDependencies": {
     "@types/mocha": "5.2.7",
-    "@types/node": "12.12.6",
+    "@types/node": "12.12.7",
     "@typescript-eslint/eslint-plugin": "2.6.1",
     "@typescript-eslint/parser": "2.6.1",
     "eslint": "6.6.0",
     "eslint-config-prettier": "6.5.0",
     "eslint-plugin-prettier": "3.1.1",
     "expect": "24.9.0",
-    "fn2": "0.12.0",
     "husky": "3.0.9",
     "lint-staged": "9.4.2",
     "mocha": "6.2.2",
-    "npm-check-updates": "3.2.0",
-    "prettier": "1.18.2",
+    "npm-check-updates": "3.2.1",
+    "prettier": "1.19.0",
     "release-it": "12.4.3",
     "rollup": "1.26.3",
+    "rollup-plugin-commonjs": "10.1.0",
+    "rollup-plugin-node-resolve": "5.2.0",
     "semver": "6.3.0",
     "terser": "4.3.9",
     "ts-node": "8.4.1",
     "typescript": "3.7.2"
   },
-  "dependencies": {},
+  "dependencies": {
+    "fn2": "0.19.0"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged && npm test"

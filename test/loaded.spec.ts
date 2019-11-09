@@ -1,4 +1,4 @@
-import Fn2 from "fn2"
+import fn2 from "fn2"
 import expect from "./expect"
 import load, { instance } from "../src"
 
@@ -17,10 +17,22 @@ it("loads synchronous libraries", () => {
   const b = {
     a: null,
   }
-  const out = load(Fn2, { a, b })
-  expect(out).toEqual({ a, b })
+  const out = load({ a, b })
+  expect(out).toEqual({ a, b, fn2 })
   expect(a.b).toEqual(b)
   expect(b.a).toEqual(a)
+})
+
+it("makes fn2 available", () => {
+  const a = {
+    fn2: null,
+  }
+  const b = {
+    fn2: null,
+  }
+  load({ a, b })
+  expect(a.fn2).toEqual(fn2)
+  expect(b.fn2).toEqual(fn2)
 })
 
 it("loads asynchronous libraries", async () => {
@@ -30,11 +42,11 @@ it("loads asynchronous libraries", async () => {
   const b = {
     a: null,
   }
-  const out = await load(Fn2, {
+  const out = await load({
     a: delay(1, a),
     b: delay(1, b),
   })
-  expect(out).toEqual({ a, b })
+  expect(out).toEqual({ a, b, fn2 })
   expect(a.b).toEqual(b)
   expect(b.a).toEqual(a)
 })
@@ -49,7 +61,7 @@ it("calls loaded callback with correct args", async () => {
 
     loaded({ name, loaded }): void {
       expect(name).toBe("a")
-      expect(loaded).toEqual({})
+      expect(loaded).toEqual({ fn2 })
     }
   }
 
@@ -58,14 +70,14 @@ it("calls loaded callback with correct args", async () => {
 
     loaded({ name, loaded }): void {
       expect(name).toBe("b")
-      expect(loaded).toEqual({ a })
+      expect(loaded).toEqual({ a, fn2 })
     }
   }
 
   a = new A()
   const b = new B()
 
-  load(Fn2, { a, b })
+  load({ a, b })
 })
 
 it("calls async loaded callback on sync load", async () => {
@@ -83,7 +95,7 @@ it("calls async loaded callback on sync load", async () => {
     a: null,
   }
 
-  await load(Fn2, { a, b })
+  await load({ a, b })
 })
 
 it("calls async loaded callback on async load", async () => {
@@ -100,7 +112,7 @@ it("calls async loaded callback on async load", async () => {
     a: null,
   }
 
-  await load(Fn2, { a: delay(1, a), b: delay(1, b) })
+  await load({ a: delay(1, a), b: delay(1, b) })
 })
 
 it("calls loadedBy callback with correct args", async () => {
@@ -134,7 +146,7 @@ it("calls loadedBy callback with correct args", async () => {
 
   const b = new B()
 
-  load(Fn2, { a, b })
+  load({ a, b })
 })
 
 it("calls async loadedBy callback on sync load", async () => {
@@ -164,7 +176,7 @@ it("calls async loadedBy callback on sync load", async () => {
 
   b = new B()
 
-  await load(Fn2, { a, b })
+  await load({ a, b })
 })
 
 it("calls async loadedBy callback on async load", async () => {
@@ -194,5 +206,5 @@ it("calls async loadedBy callback on async load", async () => {
 
   b = new B()
 
-  await load(Fn2, { a: delay(1, a), b: delay(1, b) })
+  await load({ a: delay(1, a), b: delay(1, b) })
 })

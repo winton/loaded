@@ -10,5 +10,5 @@ MJS="./dist/mjs/loaded-$VERSION_BUMP.mjs"
 
 rm -rf dist
 tsc -b
-npx rollup $ESM --context this --file $MJS -f esm
+npx rollup $ESM -c --context this --file $MJS -f esm
 npx terser $MJS --compress -m reserved=['lid','lid_'] -o $MJS
