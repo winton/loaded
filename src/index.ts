@@ -1,4 +1,5 @@
 import fn2, { fn2out } from "fn2"
+import { DepGraph } from "dependency-graph"
 
 export interface LoadedEvent {
   name: string
@@ -8,9 +9,11 @@ export interface LoadedEvent {
 }
 
 export class Loaded {
+  graph: DepGraph<string>
+  deps: Record<string, string[]>
+  libs: Record<string, any>
   loaded: Record<string, any>
-  loadedByQueue: Record<string, LoadedEvent[]>
-  pendingRetrieved: Record<string, any>
+  pending: Record<string, any>
   retrieved: Record<string, any>
 
   constructor() {
@@ -18,7 +21,8 @@ export class Loaded {
   }
 
   load(libs: Record<string, any>): fn2out {
-    this.setupLoad(libs)
+    this.assignLibs(libs)
+    this.setupLibs()
 
     const out = this.loadLibs(libs)
 
@@ -30,56 +34,69 @@ export class Loaded {
   }
 
   reset(): void {
+    this.graph = new DepGraph()
+    this.deps = {}
+    this.libs = {}
     this.loaded = {}
-    this.loadedByQueue = {}
-    this.pendingRetrieved = {}
+    this.pending = {}
     this.retrieved = {}
 
     this.load({ fn2 })
   }
 
-  private setupLoad(libs: Record<string, any>): void {
+  private assignLibs(libs: Record<string, any>): void {
     for (const libName in libs) {
-      const lib = libs[libName]
+      this.libs = { ...this.libs, [libName]: libs[libName] }
+    }
+  }
+
+  private setupLibs(): void {
+    for (const libName in this.libs) {
+      const lib = this.libs[libName]
 
       if (lib.then) {
-        this.pendingRetrieved[
-          libName
-        ] = lib.then((lib: any) =>
-          this.setRetrieved(libName, lib)
+        this.pending[libName] = lib.then((lib: any) =>
+          this.setupLib(libName, lib)
         )
       } else {
-        this.setRetrieved(libName, lib)
+        this.setupLib(libName, lib)
       }
     }
   }
 
-  private setRetrieved(libName: string, lib: any): void {
-    this.pendingRetrieved[libName] = undefined
+  private setupLib(libName: string, lib: any): void {
+    this.pending[libName] = undefined
     this.retrieved[libName] = lib.default || lib
+
+    this.graph.addNode(libName)
+
+    for (const depName in this.libs) {
+      if (this.retrieved[libName][depName] === null) {
+        this.deps[libName] = this.deps[libName] || []
+        this.deps[libName] = this.deps[libName].concat(
+          depName
+        )
+
+        this.graph.addNode(depName)
+        this.graph.addDependency(libName, depName)
+      }
+    }
   }
 
   private loadLibs(libs: Record<string, any>): fn2out {
     return fn2.run(
-      [libs],
       Object.keys(libs).reduce((memo, libName) => {
-        memo[libName] = (): fn2out =>
-          this.loadLib(libs, libName)
-
+        memo[libName] = (): fn2out => this.loadLib(libName)
         return memo
       }, {})
     )
   }
 
-  private loadLib(
-    libs: Record<string, any>,
-    libName: string
-  ): fn2out {
+  private loadLib(libName: string): fn2out {
     return fn2.run(
-      [libs, libName],
+      [libName],
       {
-        [libName]: (): any =>
-          this.pendingRetrieved[libName],
+        [libName]: (): any => this.pending[libName],
       },
       {
         waitRetrieved: this.waitRetrieved.bind(this),
@@ -88,145 +105,95 @@ export class Loaded {
         attachRetrieved: this.attachRetrieved.bind(this),
       },
       {
-        loadedCallback: this.loadedCallback.bind(this),
-      },
-      {
-        loadedByCallbacks: this.loadedByCallbacks.bind(
-          this
-        ),
+        loadDeps: this.loadDeps.bind(this),
       }
     )
   }
 
-  private waitRetrieved(
-    libs: Record<string, any>,
-    libName: string
-  ): fn2out {
-    const lib = this.retrieved[libName]
+  private waitRetrieved(libName: string): fn2out {
+    const deps = this.graph.dependenciesOf(libName)
+
+    if (deps.length === 0) {
+      return
+    }
 
     return fn2.run(
-      Object.keys(this.pendingRetrieved).reduce(
-        (memo, depName) => {
-          if (
-            depName !== libName &&
-            lib[depName] === null &&
-            this.pendingRetrieved[depName]
-          ) {
-            memo[libName] = (): any =>
-              this.pendingRetrieved[depName]
-          }
-
-          return memo
-        },
-        {}
-      )
+      deps.reduce((memo, depName) => {
+        if (this.pending[depName]) {
+          memo[depName] = (): any => this.pending[depName]
+        }
+        return memo
+      }, {})
     )
   }
 
-  private attachRetrieved(
-    libs: Record<string, any>,
-    libName: string
-  ): void {
+  private attachRetrieved(libName: string): fn2out {
+    const deps = this.graph
+      .dependenciesOf(libName)
+      .concat([libName])
+
+    return fn2.run(
+      deps.reduce((memo, depName) => {
+        memo[depName] = (): any => this.attachDeps(depName)
+        return memo
+      }, {})
+    )
+  }
+
+  private attachDeps(libName: string): void {
     const lib = this.retrieved[libName]
+    const deps = this.deps[libName]
 
-    for (const depName in this.pendingRetrieved) {
-      if (depName === libName || lib[depName] !== null) {
-        continue
-      }
+    if (!deps) {
+      return
+    }
 
+    for (const depName of deps) {
       lib[depName] = this.retrieved[depName]
     }
   }
 
-  private loadedCallback(
-    libs: Record<string, any>,
-    libName: string
-  ): fn2out {
-    const lib = this.retrieved[libName]
+  private loadDeps(libName: string): fn2out {
+    const deps = this.graph
+      .dependenciesOf(libName)
+      .concat([libName])
 
-    const event: LoadedEvent = {
-      loaded: this.loaded,
-      name: libName,
+    return fn2.run(
+      deps.reduce((memo, depName) => {
+        memo[depName] = (): fn2out => this.loadDep(depName)
+        return memo
+      }, {})
+    )
+  }
+
+  private loadDep(libName: string): fn2out {
+    const deps = this.deps[libName]
+
+    if (this.loaded[libName]) {
+      return
     }
 
     return fn2.run(
+      (deps || []).reduce((memo, depName) => {
+        memo[`${depName}LoadedBy`] = (): any =>
+          this.loadedByCallback(libName, depName)
+        return memo
+      }, {}),
       {
-        loaded: (): any => {
-          if (lib.loaded) {
-            return lib.loaded(event)
-          }
-        },
+        loadedCallback: () => this.loadedCallback(libName),
       },
       {
-        setLoaded: (): void => {
-          this.loaded[libName] = this.retrieved[libName]
-        },
+        setLoaded: () =>
+          (this.loaded[libName] = this.retrieved[libName]),
       }
     )
   }
 
-  private loadedByCallbacks(
-    libs: Record<string, any>,
-    libName: string
-  ): fn2out {
+  loadedByCallback(libName: string, depName: string): any {
     const lib = this.retrieved[libName]
-    const queue = this.loadedByQueue[libName] || []
-
-    return fn2.run(
-      queue.reduce(
-        this.processLoadedByQueue.bind(this),
-        {}
-      ),
-      {
-        clearLoadedByQueue: (): void => {
-          this.loadedByQueue[libName] = undefined
-        },
-      },
-      Object.keys(this.pendingRetrieved).reduce(
-        (memo, depName) => {
-          this.loadedByEnqueueOrCall(
-            memo,
-            depName,
-            lib,
-            libName
-          )
-          return memo
-        },
-        {}
-      )
-    )
-  }
-
-  private processLoadedByQueue(
-    memo: Record<string, any>,
-    event: LoadedEvent
-  ): Record<string, any> {
-    const lib = this.loaded[event.name]
-
-    if (lib.loadedBy) {
-      memo[
-        `${event.byName} -> ${event.name}`
-      ] = (): any => {
-        return lib.loadedBy(event)
-      }
-    }
-
-    return memo
-  }
-
-  private loadedByEnqueueOrCall(
-    memo: Record<string, any>,
-    depName: string,
-    lib: any,
-    libName: string
-  ): void {
     const dep = this.retrieved[depName]
 
-    if (
-      depName === libName ||
-      lib[depName] !== dep ||
-      !dep.loadedBy
-    ) {
+    if (this.loaded[libName] || !dep.loadedBy) {
       return
     }
 
@@ -237,16 +204,22 @@ export class Loaded {
       byName: libName,
     }
 
-    if (this.loaded[depName]) {
-      memo[libName] = (): any => dep.loadedBy(event)
-    } else {
-      this.loadedByQueue[depName] =
-        this.loadedByQueue[depName] || []
+    return dep.loadedBy(event)
+  }
 
-      this.loadedByQueue[depName] = this.loadedByQueue[
-        depName
-      ].concat(event)
+  loadedCallback(libName: string): any {
+    const lib = this.retrieved[libName]
+
+    if (this.loaded[libName] || !lib.loaded) {
+      return
     }
+
+    const event: LoadedEvent = {
+      loaded: this.loaded,
+      name: libName,
+    }
+
+    return lib.loaded(event)
   }
 }
 
