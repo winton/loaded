@@ -11,7 +11,7 @@ export interface LoadedEvent {
 export class Loaded {
   graph: DepGraph<string>
   deps: Record<string, string[]>
-  libs: Record<string, any>
+  libs: Set<string>
   loaded: Record<string, any>
   pending: Record<string, any>
   retrieved: Record<string, any>
@@ -21,8 +21,7 @@ export class Loaded {
   }
 
   load(libs: Record<string, any>): fn2out {
-    this.assignLibs(libs)
-    this.setupLibs()
+    this.setupLibs(libs)
 
     const out = this.loadLibs(libs)
 
@@ -36,7 +35,7 @@ export class Loaded {
   reset(): void {
     this.graph = new DepGraph()
     this.deps = {}
-    this.libs = {}
+    this.libs = new Set()
     this.loaded = {}
     this.pending = {}
     this.retrieved = {}
@@ -44,15 +43,13 @@ export class Loaded {
     this.load({ fn2 })
   }
 
-  private assignLibs(libs: Record<string, any>): void {
+  private setupLibs(libs: Record<string, any>): void {
     for (const libName in libs) {
-      this.libs = { ...this.libs, [libName]: libs[libName] }
+      this.libs.add(libName)
     }
-  }
 
-  private setupLibs(): void {
-    for (const libName in this.libs) {
-      const lib = this.libs[libName]
+    for (const libName in libs) {
+      const lib = libs[libName]
 
       if (lib.then) {
         this.pending[libName] = lib.then((lib: any) =>
@@ -70,7 +67,7 @@ export class Loaded {
 
     this.graph.addNode(libName)
 
-    for (const depName in this.libs) {
+    for (const depName of Array.from(this.libs.values())) {
       if (this.retrieved[libName][depName] === null) {
         this.deps[libName] = this.deps[libName] || []
         this.deps[libName] = this.deps[libName].concat(
