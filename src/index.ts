@@ -9,8 +9,8 @@ export interface LoadedEvent {
 }
 
 export class Loaded {
-  graph: DepGraph<string>
   deps: Record<string, string[]>
+  graph: DepGraph<string>
   libs: Set<string>
   loaded: Record<string, any>
   pending: Record<string, any>
@@ -34,8 +34,9 @@ export class Loaded {
 
   reset(): void {
     this.graph = new DepGraph()
-    this.deps = {}
     this.libs = new Set()
+
+    this.deps = {}
     this.loaded = {}
     this.pending = {}
     this.retrieved = {}
@@ -69,10 +70,9 @@ export class Loaded {
 
     for (const depName of Array.from(this.libs.values())) {
       if (this.retrieved[libName][depName] === null) {
-        this.deps[libName] = this.deps[libName] || []
-        this.deps[libName] = this.deps[libName].concat(
-          depName
-        )
+        this.deps[libName] = (
+          this.deps[libName] || []
+        ).concat(depName)
 
         this.graph.addNode(depName)
         this.graph.addDependency(libName, depName)
