@@ -11,6 +11,7 @@ export interface LoadedEvent {
 export class Loaded {
   deps: Record<string, string[]>
   graph: DepGraph<string>
+  graphCache: Record<string, string[]>
   libs: Set<string>
   loaded: Record<string, any>
   pending: Record<string, any>
@@ -32,16 +33,35 @@ export class Loaded {
     }
   }
 
-  reset(): void {
+  reset(): fn2out | void {
+    let out
+
+    if (this.loaded) {
+      out = fn2.run(
+        Object.keys(this.loaded).reduce((memo, libName) => {
+          const lib = this.loaded[libName]
+
+          if (lib.reset) {
+            memo[libName] = lib.reset()
+          }
+
+          return memo
+        }, {})
+      )
+    }
+
     this.graph = new DepGraph()
     this.libs = new Set()
 
     this.deps = {}
+    this.graphCache = {}
     this.loaded = {}
     this.pending = {}
     this.retrieved = {}
 
     this.load({ fn2 })
+
+    return out
   }
 
   private setupLibs(libs: Record<string, any>): void {
@@ -78,6 +98,12 @@ export class Loaded {
         this.graph.addDependency(libName, depName)
       }
     }
+
+    for (const libName in this.retrieved) {
+      this.graphCache[libName] = this.graph.dependenciesOf(
+        libName
+      )
+    }
   }
 
   private loadLibs(libs: Record<string, any>): fn2out {
@@ -108,7 +134,7 @@ export class Loaded {
   }
 
   private waitRetrieved(libName: string): fn2out {
-    const deps = this.graph.dependenciesOf(libName)
+    const deps = this.graphCache[libName]
 
     if (deps.length === 0) {
       return
@@ -125,9 +151,7 @@ export class Loaded {
   }
 
   private attachRetrieved(libName: string): fn2out {
-    const deps = this.graph
-      .dependenciesOf(libName)
-      .concat([libName])
+    const deps = this.graphCache[libName].concat([libName])
 
     return fn2.run(
       deps.reduce((memo, depName) => {
@@ -151,9 +175,7 @@ export class Loaded {
   }
 
   private loadDeps(libName: string): fn2out {
-    const deps = this.graph
-      .dependenciesOf(libName)
-      .concat([libName])
+    const deps = this.graphCache[libName].concat([libName])
 
     return fn2.run(
       deps.reduce((memo, depName) => {
