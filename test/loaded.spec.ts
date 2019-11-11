@@ -2,7 +2,7 @@ import logger from "@fn2/logger"
 import tinyId from "@fn2/tiny-id"
 
 import expect from "./expect"
-import load, { fn2, instance } from "../src"
+import loaded, { fn2 } from "../src"
 
 function delay(t: number, v?: any): Promise<any> {
   return new Promise((resolve): void => {
@@ -11,8 +11,8 @@ function delay(t: number, v?: any): Promise<any> {
 }
 
 beforeEach(() => {
-  instance.reset()
-  load({ logger, tinyId })
+  loaded.reset()
+  loaded.load({ logger, tinyId })
 })
 
 it("loads synchronous libraries", () => {
@@ -23,7 +23,7 @@ it("loads synchronous libraries", () => {
     c: null,
   }
   const c = {}
-  const out = load({ a, b, c })
+  const out = loaded.load({ a, b, c })
   expect(out).toEqual(
     expect.objectContaining({ a, b, c, fn2 })
   )
@@ -38,7 +38,7 @@ it("makes fn2 available", () => {
   const b = {
     fn2: null,
   }
-  load({ a, b })
+  loaded.load({ a, b })
   expect(a.fn2).toEqual(fn2)
   expect(b.fn2).toEqual(fn2)
 })
@@ -51,7 +51,7 @@ it("loads asynchronous libraries", async () => {
     c: null,
   }
   const c = {}
-  const out = await load({
+  const out = await loaded.load({
     a: delay(1, a),
     b: delay(1, b),
     c: delay(1, c),
@@ -105,7 +105,7 @@ it("calls loaded callback with correct args", async () => {
   b = new B()
   c = new C()
 
-  load({ a, b, c })
+  loaded.load({ a, b, c })
 })
 
 it("calls async loaded callback on sync load", async () => {
@@ -125,7 +125,7 @@ it("calls async loaded callback on sync load", async () => {
 
   const c = {}
 
-  await load({ a, b, c })
+  await loaded.load({ a, b, c })
 })
 
 it("calls async loaded callback on async load", async () => {
@@ -145,7 +145,7 @@ it("calls async loaded callback on async load", async () => {
 
   const c = {}
 
-  await load({
+  await loaded.load({
     a: delay(1, a),
     b: delay(1, b),
     c: delay(1, c),
@@ -195,7 +195,7 @@ it("calls loadedBy callback with correct args", async () => {
   b = new B()
   c = new C()
 
-  load({ a, b, c })
+  loaded.load({ a, b, c })
 })
 
 it("calls async loadedBy callback on sync load", async () => {
@@ -228,7 +228,7 @@ it("calls async loadedBy callback on sync load", async () => {
   b = new B()
   c = new C()
 
-  await load({ a, b, c })
+  await loaded.load({ a, b, c })
 })
 
 it("calls async loadedBy callback on async load", async () => {
@@ -261,7 +261,7 @@ it("calls async loadedBy callback on async load", async () => {
   b = new B()
   c = new C()
 
-  await load({
+  await loaded.load({
     a: delay(1, a),
     b: delay(1, b),
     c: delay(1, c),
@@ -291,6 +291,6 @@ it("calls reset callback", () => {
     },
   }
 
-  load({ a, b, c })
-  instance.reset()
+  loaded.load({ a, b, c })
+  loaded.reset()
 })
