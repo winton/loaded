@@ -77,9 +77,10 @@ export class Loaded {
       const lib = libs[libName]
 
       if (lib.then) {
-        this.pending[libName] = lib.then((lib: any) =>
+        this.pending[libName] = lib.then((lib: any) => {
           this.setupLib(libName, lib)
-        )
+          return this.waitRetrieved(libName)
+        })
       } else {
         this.setupLib(libName, lib)
       }
