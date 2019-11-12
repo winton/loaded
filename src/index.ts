@@ -36,17 +36,19 @@ export class Loaded {
   reset(): fn2out | void {
     let out
 
-    if (this.loaded) {
+    if (this.graph) {
       out = fn2.run(
-        Object.keys(this.loaded).reduce((memo, libName) => {
-          const lib = this.loaded[libName]
+        this.graph
+          .overallOrder()
+          .reduce((memo, libName) => {
+            const lib = this.loaded[libName]
 
-          if (lib.reset) {
-            memo[libName] = lib.reset()
-          }
+            if (lib.reset) {
+              memo[libName] = lib.reset()
+            }
 
-          return memo
-        }, {})
+            return memo
+          }, {})
       )
     }
 
