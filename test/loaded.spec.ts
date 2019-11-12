@@ -2,7 +2,7 @@ import logger from "@fn2/logger"
 import tinyId from "@fn2/tiny-id"
 
 import expect from "./expect"
-import loaded, { fn2 } from "../src"
+import loaded from "../src"
 
 function delay(t: number, v?: any): Promise<any> {
   return new Promise((resolve): void => {
@@ -25,7 +25,7 @@ it("loads synchronous libraries", () => {
   const c = {}
   const out = loaded.load({ a, b, c })
   expect(out).toEqual(
-    expect.objectContaining({ a, b, c, fn2 })
+    expect.objectContaining({ a, b, c, fn2: loaded.fn2 })
   )
   expect(a.b).toEqual(b)
   expect(b.c).toEqual(c)
@@ -39,8 +39,8 @@ it("makes fn2 available", () => {
     fn2: null,
   }
   loaded.load({ a, b })
-  expect(a.fn2).toEqual(fn2)
-  expect(b.fn2).toEqual(fn2)
+  expect(a.fn2).toEqual(loaded.fn2)
+  expect(b.fn2).toEqual(loaded.fn2)
 })
 
 it("loads asynchronous libraries", async () => {
@@ -57,7 +57,7 @@ it("loads asynchronous libraries", async () => {
     c: delay(1, c),
   })
   expect(out).toEqual(
-    expect.objectContaining({ a, b, c, fn2 })
+    expect.objectContaining({ a, b, c, fn2: loaded.fn2 })
   )
   expect(a.b).toEqual(b)
   expect(b.c).toEqual(c)
@@ -76,7 +76,7 @@ it("calls loaded callback with correct args", async () => {
     loaded({ name, loaded }): void {
       expect(name).toBe("a")
       expect(loaded).toEqual(
-        expect.objectContaining({ b, c, fn2 })
+        expect.objectContaining({ b, c, fn2: loaded.fn2 })
       )
     }
   }
@@ -87,7 +87,7 @@ it("calls loaded callback with correct args", async () => {
     loaded({ name, loaded }): void {
       expect(name).toBe("b")
       expect(loaded).toEqual(
-        expect.objectContaining({ c, fn2 })
+        expect.objectContaining({ c, fn2: loaded.fn2 })
       )
     }
   }
@@ -96,7 +96,7 @@ it("calls loaded callback with correct args", async () => {
     loaded({ name, loaded }): void {
       expect(name).toBe("c")
       expect(loaded).toEqual(
-        expect.objectContaining({ fn2 })
+        expect.objectContaining({ fn2: loaded.fn2 })
       )
     }
   }
@@ -173,7 +173,7 @@ it("calls loadedBy callback with correct args", async () => {
     loadedBy({ name, loaded, byName, by }): void {
       expect(name).toBe("b")
       expect(loaded).toEqual(
-        expect.objectContaining({ b, c, fn2 })
+        expect.objectContaining({ b, c, fn2: loaded.fn2 })
       )
       expect(byName).toBe("a")
       expect(by).toBe(a)
@@ -184,7 +184,7 @@ it("calls loadedBy callback with correct args", async () => {
     loadedBy({ name, loaded, byName, by }): void {
       expect(name).toBe("c")
       expect(loaded).toEqual(
-        expect.objectContaining({ c, fn2 })
+        expect.objectContaining({ c, fn2: loaded.fn2 })
       )
       expect(byName).toBe("b")
       expect(by).toBe(b)

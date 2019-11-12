@@ -1,4 +1,4 @@
-import fn2, { fn2out } from "fn2"
+import { Fn2, fn2out } from "fn2"
 import { DepGraph } from "dependency-graph"
 
 export interface LoadedEvent {
@@ -12,6 +12,7 @@ export class Loaded {
   deps: Record<string, string[]>
   graph: DepGraph<string>
   graphCache: Record<string, string[]>
+  fn2: Fn2
   libs: Set<string>
   loaded: Record<string, any>
   pending: Record<string, any>
@@ -37,7 +38,7 @@ export class Loaded {
     let out
 
     if (this.graph) {
-      out = fn2.run(
+      out = this.fn2.run(
         this.graph
           .overallOrder()
           .reduce((memo, libName) => {
@@ -52,6 +53,7 @@ export class Loaded {
       )
     }
 
+    this.fn2 = new Fn2()
     this.graph = new DepGraph()
     this.libs = new Set()
 
@@ -61,7 +63,7 @@ export class Loaded {
     this.pending = {}
     this.retrieved = {}
 
-    this.load({ fn2 })
+    this.load({ fn2: this.fn2 })
 
     return out
   }
@@ -109,7 +111,7 @@ export class Loaded {
   }
 
   private loadLibs(libs: Record<string, any>): fn2out {
-    return fn2.run(
+    return this.fn2.run(
       Object.keys(libs).reduce((memo, libName) => {
         memo[libName] = (): fn2out => this.loadLib(libName)
         return memo
@@ -118,7 +120,7 @@ export class Loaded {
   }
 
   private loadLib(libName: string): fn2out {
-    return fn2.run(
+    return this.fn2.run(
       [libName],
       {
         [libName]: (): any => this.pending[libName],
@@ -142,7 +144,7 @@ export class Loaded {
       return
     }
 
-    return fn2.run(
+    return this.fn2.run(
       deps.reduce((memo, depName) => {
         if (this.pending[depName]) {
           memo[depName] = (): any => this.pending[depName]
@@ -155,7 +157,7 @@ export class Loaded {
   private attachRetrieved(libName: string): fn2out {
     const deps = this.graphCache[libName].concat([libName])
 
-    return fn2.run(
+    return this.fn2.run(
       deps.reduce((memo, depName) => {
         memo[depName] = (): any => this.attachDeps(depName)
         return memo
@@ -179,7 +181,7 @@ export class Loaded {
   private loadDeps(libName: string): fn2out {
     const deps = this.graphCache[libName].concat([libName])
 
-    return fn2.run(
+    return this.fn2.run(
       deps.reduce((memo, depName) => {
         memo[depName] = (): fn2out => this.loadDep(depName)
         return memo
@@ -194,7 +196,7 @@ export class Loaded {
       return
     }
 
-    return fn2.run(
+    return this.fn2.run(
       (deps || []).reduce((memo, depName) => {
         memo[`${depName}LoadedBy`] = (): any =>
           this.loadedByCallback(libName, depName)
@@ -245,4 +247,4 @@ export class Loaded {
 }
 
 export default new Loaded()
-export { fn2 }
+export * from "fn2"
