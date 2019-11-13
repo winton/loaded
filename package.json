@@ -20,12 +20,12 @@
   },
   "homepage": "https://github.com/winton/loaded#readme",
   "devDependencies": {
-    "@fn2/logger": "0.5.0",
-    "@fn2/tiny-id": "0.4.0",
+    "@fn2/logger": "0.8.0",
+    "@fn2/tiny-id": "0.5.0",
     "@types/mocha": "5.2.7",
     "@types/node": "12.12.7",
-    "@typescript-eslint/eslint-plugin": "2.6.1",
-    "@typescript-eslint/parser": "2.6.1",
+    "@typescript-eslint/eslint-plugin": "2.7.0",
+    "@typescript-eslint/parser": "2.7.0",
     "eslint": "6.6.0",
     "eslint-config-prettier": "6.5.0",
     "eslint-plugin-prettier": "3.1.1",
@@ -36,16 +36,16 @@
     "npm-check-updates": "3.2.1",
     "prettier": "1.19.1",
     "release-it": "12.4.3",
-    "rollup": "1.26.4",
+    "rollup": "1.27.0",
     "rollup-plugin-commonjs": "10.1.0",
     "rollup-plugin-node-resolve": "5.2.0",
     "semver": "6.3.0",
-    "ts-node": "8.4.1",
+    "ts-node": "8.5.0",
     "typescript": "3.7.2"
   },
   "dependencies": {
     "dependency-graph": "0.8.0",
-    "fn2": "0.20.0"
+    "fn2": "0.21.0"
   },
   "husky": {
     "hooks": {
