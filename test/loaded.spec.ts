@@ -63,6 +63,27 @@ it("loads asynchronous libraries", async () => {
   expect(b.c).toEqual(c)
 })
 
+it("loads asynchronous libraries (with wait)", async () => {
+  const a = {
+    b: null,
+  }
+  const b = {
+    c: null,
+  }
+  const c = {}
+  loaded.load({
+    a: delay(1, a),
+    b: delay(1, b),
+    c: delay(1, c),
+  })
+  const out = await loaded.wait("a", "b", "c")
+  expect(out).toEqual(
+    expect.objectContaining({ a, b, c, fn2: loaded.fn2 })
+  )
+  expect(a.b).toEqual(b)
+  expect(b.c).toEqual(c)
+})
+
 it("calls loaded callback with correct args", async () => {
   expect.assertions(6)
 
