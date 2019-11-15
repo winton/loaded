@@ -52,7 +52,7 @@ export class Loaded {
           .reduce((memo, libName) => {
             const lib = this.loaded[libName]
 
-            if (lib.reset) {
+            if (lib !== this && lib.reset) {
               memo[libName] = lib.reset()
             }
 
@@ -72,7 +72,7 @@ export class Loaded {
     this.loadingResolvers = {}
     this.retrieving = {}
 
-    this.load({ fn2: this.fn2 })
+    this.load({ fn2: this.fn2, loaded: this })
 
     return out
   }
@@ -255,7 +255,11 @@ export class Loaded {
   private loadedCallback(libName: string): any {
     const lib = this.libs[libName]
 
-    if (this.loaded[libName] || !lib.loaded) {
+    if (
+      lib === this ||
+      this.loaded[libName] ||
+      !lib.loaded
+    ) {
       return
     }
 
