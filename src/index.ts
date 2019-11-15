@@ -126,7 +126,8 @@ export class Loaded {
         [libName]: (): any => {
           if (lib.then) {
             return lib.then(
-              (lib: any) => (this.libs[libName] = lib)
+              (lib: any) =>
+                (this.libs[libName] = lib.default || lib)
             )
           } else {
             this.libs[libName] = lib
