@@ -61,6 +61,12 @@ export class Loaded {
       )
     }
 
+    for (const libName in this.deps) {
+      for (const depName of this.deps[libName]) {
+        this.libs[libName][depName] = null
+      }
+    }
+
     this.fn2 = new Fn2()
     this.graph = new DepGraph()
 
@@ -74,6 +80,7 @@ export class Loaded {
 
     this.load({
       fn2: this.fn2,
+      libs: this.libs,
       load: this.load.bind(this),
       wait: this.wait.bind(this),
     })
