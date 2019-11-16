@@ -44,7 +44,6 @@
     "typescript": "3.7.2"
   },
   "dependencies": {
-    "dependency-graph": "0.8.0",
     "fn2": "0.22.0"
   },
   "husky": {

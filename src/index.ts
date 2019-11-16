@@ -1,5 +1,5 @@
 import { Fn2, fn2out } from "fn2"
-import { DepGraph } from "dependency-graph"
+import { DepGraph } from "./graph"
 
 export interface LoadedEvent {
   name: string
@@ -40,10 +40,9 @@ export class Loaded {
 
     this.resetDeps()
 
+    this.deps = {}
     this.fn2 = new Fn2()
     this.graph = new DepGraph()
-
-    this.deps = {}
     this.graphCache = {}
     this.libs = {}
     this.loaded = {}
