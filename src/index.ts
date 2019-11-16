@@ -24,14 +24,7 @@ export class Loaded {
   }
 
   load(libs: Record<string, any>): fn2out {
-    for (const libName in libs) {
-      this.graph.addNode(libName)
-      this.libs[libName] = undefined
-      this.loading[libName] = new Promise(
-        resolve =>
-          (this.loadingResolvers[libName] = resolve)
-      )
-    }
+    this.initLibs(libs)
 
     const out = this.loadLibs(libs)
 
@@ -43,29 +36,9 @@ export class Loaded {
   }
 
   reset(): fn2out | void {
-    let out
+    const out = this.resetLibs()
 
-    if (this.graph) {
-      out = this.fn2.run(
-        this.graph
-          .overallOrder()
-          .reduce((memo, libName) => {
-            const lib = this.loaded[libName]
-
-            if (lib.reset) {
-              memo[libName] = lib.reset()
-            }
-
-            return memo
-          }, {})
-      )
-    }
-
-    for (const libName in this.deps) {
-      for (const depName of this.deps[libName]) {
-        this.libs[libName][depName] = null
-      }
-    }
+    this.resetDeps()
 
     this.fn2 = new Fn2()
     this.graph = new DepGraph()
@@ -95,6 +68,17 @@ export class Loaded {
     )
 
     return this.loaded
+  }
+
+  private initLibs(libs: Record<string, any>): void {
+    for (const libName in libs) {
+      this.graph.addNode(libName)
+      this.libs[libName] = undefined
+      this.loading[libName] = new Promise(
+        resolve =>
+          (this.loadingResolvers[libName] = resolve)
+      )
+    }
   }
 
   private loadLibs(libs: Record<string, any>): fn2out {
@@ -278,6 +262,32 @@ export class Loaded {
     }
 
     return lib.loaded(event)
+  }
+
+  private resetLibs(): fn2out {
+    if (this.graph) {
+      return this.fn2.run(
+        this.graph
+          .overallOrder()
+          .reduce((memo, libName) => {
+            const lib = this.loaded[libName]
+
+            if (lib.reset) {
+              memo[libName] = lib.reset()
+            }
+
+            return memo
+          }, {})
+      )
+    }
+  }
+
+  private resetDeps(): void {
+    for (const libName in this.deps) {
+      for (const depName of this.deps[libName]) {
+        this.libs[libName][depName] = null
+      }
+    }
   }
 }
 
