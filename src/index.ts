@@ -61,12 +61,10 @@ export class Loaded {
     return out
   }
 
-  async wait(...libs: string[]): Promise<any> {
-    await Promise.all(
+  wait(...libs: string[]): Promise<any> {
+    return Promise.all(
       libs.map(libName => this.loading[libName])
-    )
-
-    return this.loaded
+    ).then(() => this.loaded)
   }
 
   private initLibs(libs: Record<string, any>): void {
