@@ -72,13 +72,6 @@ export class DepGraph<T> {
   }
 
   /**
-   * The number of nodes in the graph.
-   */
-  size(): number {
-    return Object.keys(this.nodes).length
-  }
-
-  /**
    * Add a node in the graph with optional data. If data is not given, name will be used as data.
    * @param {string} node
    * @param data
@@ -97,58 +90,11 @@ export class DepGraph<T> {
   }
 
   /**
-   * Remove a node from the graph.
-   * @param {string} node
-   */
-  removeNode(node: string): void {
-    if (this.hasNode(node)) {
-      delete this.nodes[node]
-      delete this.outgoingEdges[node]
-      delete this.incomingEdges[node]
-      ;[this.incomingEdges, this.outgoingEdges].forEach(
-        function(edgeList) {
-          Object.keys(edgeList).forEach(function(key) {
-            const idx = edgeList[key].indexOf(node)
-            if (idx >= 0) {
-              edgeList[key].splice(idx, 1)
-            }
-          }, this)
-        }
-      )
-    }
-  }
-
-  /**
    * Check if a node exists in the graph.
    * @param {string} node
    */
   hasNode(node: string): boolean {
     return this.nodes.hasOwnProperty(node)
-  }
-
-  /**
-   * Get the data associated with a node (will throw an Error if the node does not exist).
-   * @param {string} node
-   */
-  getNodeData(node: string): T | string {
-    if (this.hasNode(node)) {
-      return this.nodes[node]
-    } else {
-      throw new Error("Node does not exist: " + node)
-    }
-  }
-
-  /**
-   * Set the data for an existing node (will throw an Error if the node does not exist).
-   * @param {string} node
-   * @param data
-   */
-  setNodeData(node: string, data?: T): void {
-    if (this.hasNode(node)) {
-      this.nodes[node] = data
-    } else {
-      throw new Error("Node does not exist: " + node)
-    }
   }
 
   /**
@@ -172,47 +118,6 @@ export class DepGraph<T> {
   }
 
   /**
-   * Remove a dependency between two nodes.
-   * @param {string} from
-   * @param {string} to
-   */
-  removeDependency(from: string, to: string): void {
-    let idx: number
-    if (this.hasNode(from)) {
-      idx = this.outgoingEdges[from].indexOf(to)
-      if (idx >= 0) {
-        this.outgoingEdges[from].splice(idx, 1)
-      }
-    }
-
-    if (this.hasNode(to)) {
-      idx = this.incomingEdges[to].indexOf(from)
-      if (idx >= 0) {
-        this.incomingEdges[to].splice(idx, 1)
-      }
-    }
-  }
-
-  /**
-   * Return a clone of the dependency graph (If any custom data is attached
-   * to the nodes, it will only be shallow copied).
-   */
-  clone(): DepGraph<T> {
-    const result = new DepGraph<T>()
-    const keys = Object.keys(this.nodes)
-    keys.forEach(n => {
-      result.nodes[n] = this.nodes[n]
-      result.outgoingEdges[n] = this.outgoingEdges[n].slice(
-        0
-      )
-      result.incomingEdges[n] = this.incomingEdges[n].slice(
-        0
-      )
-    })
-    return result
-  }
-
-  /**
    * Get an array containing the nodes that the specified node depends on (transitively). If leavesOnly is true, only nodes that do not depend on any other nodes will be returned in the array.
    * @param {string} node
    * @param {boolean} leavesOnly
@@ -225,34 +130,6 @@ export class DepGraph<T> {
       const result = []
       const DFS = this.createDFS(
         this.outgoingEdges,
-        leavesOnly,
-        result,
-        this.circular
-      )
-      DFS(node)
-      const idx = result.indexOf(node)
-      if (idx >= 0) {
-        result.splice(idx, 1)
-      }
-      return result
-    } else {
-      throw new Error("Node does not exist: " + node)
-    }
-  }
-
-  /**
-   * Get an array containing the nodes that depend on the specified node (transitively). If leavesOnly is true, only nodes that do not have any dependants will be returned in the array.
-   * @param {string} node
-   * @param {boolean} leavesOnly
-   */
-  dependantsOf(
-    node: string,
-    leavesOnly?: boolean
-  ): string[] {
-    if (this.hasNode(node)) {
-      const result = []
-      const DFS = this.createDFS(
-        this.incomingEdges,
         leavesOnly,
         result,
         this.circular
