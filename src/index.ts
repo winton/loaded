@@ -79,6 +79,7 @@ export class Loaded {
     this.retrieving = {}
 
     this.load({
+      browser: typeof history !== "undefined",
       fn2: this.fn2,
       libs: this.libs,
       load: this.load.bind(this),
