@@ -180,6 +180,12 @@ export class Loaded {
     const lib = this.libs[libName]
     const deps = this.deps[libName]
 
+    for (const depName in this.libs) {
+      if (this.libs[depName][libName] === null) {
+        this.libs[depName][libName] = lib
+      }
+    }
+
     if (!deps) {
       return
     }

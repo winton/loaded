@@ -31,6 +31,23 @@ it("loads synchronous libraries", () => {
   expect(b.c).toEqual(c)
 })
 
+it("loads synchronous libraries in separate calls", () => {
+  const a = {
+    b: null,
+  }
+  const b = {
+    c: null,
+  }
+  const c = {}
+  loaded.load({ a, b })
+  const out = loaded.load({ c })
+  expect(out).toEqual(
+    expect.objectContaining({ a, b, c, fn2: loaded.fn2 })
+  )
+  expect(a.b).toEqual(b)
+  expect(b.c).toEqual(c)
+})
+
 it("makes fn2 available", () => {
   const a = {
     fn2: null,
