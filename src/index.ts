@@ -62,6 +62,7 @@ export class Loaded {
 
     this.load({
       browser: typeof history !== "undefined",
+      evalLoad: this.evalLoad.bind(this),
       fn2: this.fn2,
       libs: this.libs,
       load: this.load.bind(this),
