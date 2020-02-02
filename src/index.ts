@@ -23,6 +23,16 @@ export class Loaded {
     this.reset()
   }
 
+  evalLoad(libs: Record<string, string>): fn2out {
+    const rows = []
+
+    for (const depName in libs) {
+      rows.push(`${depName}: import("${libs[depName]}")`)
+    }
+
+    return eval(`loaded.load({ ${rows.join(", ")} })`)
+  }
+
   load(libs: Record<string, any>): fn2out {
     this.initLibs(libs)
 
@@ -186,12 +196,10 @@ export class Loaded {
       }
     }
 
-    if (!deps) {
-      return
-    }
-
-    for (const depName of deps) {
-      lib[depName] = this.libs[depName]
+    if (deps) {
+      for (const depName of deps) {
+        lib[depName] = this.libs[depName]
+      }
     }
   }
 
