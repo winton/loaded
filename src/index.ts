@@ -192,6 +192,9 @@ export class Loaded {
     const deps = this.deps[libName]
 
     for (const depName in this.libs) {
+      if (typeof this.libs[depName] !== "object") {
+        continue
+      }
       if (this.libs[depName][libName] === null) {
         this.libs[depName][libName] = lib
       }
